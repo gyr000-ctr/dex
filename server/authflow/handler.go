@@ -36,6 +36,10 @@ type Handler struct {
 	PKCE                   PKCEConfig
 	AuthRequestsValidFor   time.Duration
 
+	// PARRequestsValidFor is the lifetime of a pushed authorization request
+	// reference (RFC 9126). Zero selects the package default.
+	PARRequestsValidFor time.Duration
+
 	// Sessions owns the session cookie, SSO lookup and auth-session CRUD.
 	Sessions *session.Manager
 	// Issuer mints tokens for the authorization response (see response.go).
@@ -55,6 +59,7 @@ type Handler struct {
 // steps are mounted separately by the server.
 func (h *Handler) Mount(m router.Mux) {
 	m.HandleFunc("/auth", h.handleAuthorization)
+	m.HandleFunc("/auth/par", h.handlePushedAuthorization)
 	m.HandleFunc("/auth/{connector}", h.handleConnectorLogin)
 	m.HandleFunc("/auth/{connector}/login", h.handlePasswordLogin)
 	// The bare /callback serves OAuth/OIDC redirects, where X-Remote-* never

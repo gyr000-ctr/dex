@@ -129,6 +129,18 @@ func (f PasswordFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.PasswordMutation", m)
 }
 
+// The PushedAuthRequestFunc type is an adapter to allow the use of ordinary
+// function as PushedAuthRequest mutator.
+type PushedAuthRequestFunc func(context.Context, *db.PushedAuthRequestMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PushedAuthRequestFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.PushedAuthRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.PushedAuthRequestMutation", m)
+}
+
 // The RefreshTokenFunc type is an adapter to allow the use of ordinary
 // function as RefreshToken mutator.
 type RefreshTokenFunc func(context.Context, *db.RefreshTokenMutation) (db.Value, error)

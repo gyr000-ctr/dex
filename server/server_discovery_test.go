@@ -37,6 +37,7 @@ func TestHandleDiscovery(t *testing.T) {
 		UserInfo:       fmt.Sprintf("%s/userinfo", httpServer.URL),
 		DeviceEndpoint: fmt.Sprintf("%s/device/code", httpServer.URL),
 		Introspect:     fmt.Sprintf("%s/token/introspect", httpServer.URL),
+		PAR:            fmt.Sprintf("%s/auth/par", httpServer.URL),
 		GrantTypes: []string{
 			"authorization_code",
 			"client_credentials",

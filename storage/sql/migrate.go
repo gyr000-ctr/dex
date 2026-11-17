@@ -512,4 +512,15 @@ var migrations = []migration{
 			`alter table auth_session add column connector_data bytea;`,
 		},
 	},
+	{
+		stmts: []string{
+			`
+			create table pushed_auth_request (
+				id text not null primary key,
+				client_id text not null,
+				params bytea not null, -- JSON object: parameter name to array of values
+				expiry timestamptz not null
+			);`,
+		},
+	},
 }

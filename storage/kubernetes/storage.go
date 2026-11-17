@@ -15,33 +15,35 @@ import (
 )
 
 const (
-	kindAuthCode        = "AuthCode"
-	kindAuthRequest     = "AuthRequest"
-	kindClient          = "OAuth2Client"
-	kindRefreshToken    = "RefreshToken"
-	kindKeys            = "SigningKey"
-	kindPassword        = "Password"
-	kindOfflineSessions = "OfflineSessions"
-	kindConnector       = "Connector"
-	kindDeviceRequest   = "DeviceRequest"
-	kindDeviceToken     = "DeviceToken"
-	kindUserIdentity    = "UserIdentity"
-	kindAuthSession     = "AuthSession"
+	kindAuthCode          = "AuthCode"
+	kindAuthRequest       = "AuthRequest"
+	kindClient            = "OAuth2Client"
+	kindRefreshToken      = "RefreshToken"
+	kindKeys              = "SigningKey"
+	kindPassword          = "Password"
+	kindOfflineSessions   = "OfflineSessions"
+	kindConnector         = "Connector"
+	kindDeviceRequest     = "DeviceRequest"
+	kindDeviceToken       = "DeviceToken"
+	kindPushedAuthRequest = "PushedAuthRequest"
+	kindUserIdentity      = "UserIdentity"
+	kindAuthSession       = "AuthSession"
 )
 
 const (
-	resourceAuthCode        = "authcodes"
-	resourceAuthRequest     = "authrequests"
-	resourceClient          = "oauth2clients"
-	resourceRefreshToken    = "refreshtokens"
-	resourceKeys            = "signingkeies" // Kubernetes attempts to pluralize.
-	resourcePassword        = "passwords"
-	resourceOfflineSessions = "offlinesessionses" // Again attempts to pluralize.
-	resourceConnector       = "connectors"
-	resourceDeviceRequest   = "devicerequests"
-	resourceDeviceToken     = "devicetokens"
-	resourceUserIdentity    = "useridentities"
-	resourceAuthSession     = "authsessions"
+	resourceAuthCode          = "authcodes"
+	resourceAuthRequest       = "authrequests"
+	resourceClient            = "oauth2clients"
+	resourceRefreshToken      = "refreshtokens"
+	resourceKeys              = "signingkeies" // Kubernetes attempts to pluralize.
+	resourcePassword          = "passwords"
+	resourceOfflineSessions   = "offlinesessionses" // Again attempts to pluralize.
+	resourceConnector         = "connectors"
+	resourceDeviceRequest     = "devicerequests"
+	resourceDeviceToken       = "devicetokens"
+	resourcePushedAuthRequest = "pushedauthrequests"
+	resourceUserIdentity      = "useridentities"
+	resourceAuthSession       = "authsessions"
 )
 
 const (
@@ -720,6 +722,21 @@ func (cli *client) GarbageCollect(ctx context.Context, now time.Time) (result st
 		}
 	}
 
+	var pushedAuthRequests PushedAuthRequestList
+	if err := cli.listN(resourcePushedAuthRequest, &pushedAuthRequests, gcResultLimit); err != nil {
+		return result, fmt.Errorf("failed to list pushed auth requests: %v", err)
+	}
+
+	for _, pushedAuthRequest := range pushedAuthRequests.PushedAuthRequests {
+		if now.After(pushedAuthRequest.Expiry) {
+			if err := cli.delete(resourcePushedAuthRequest, pushedAuthRequest.ObjectMeta.Name); err != nil && !errors.Is(err, storage.ErrNotFound) {
+				cli.logger.Error("failed to delete pushed auth request", "err", err)
+				delErr = fmt.Errorf("failed to delete pushed auth request: %v", err)
+			}
+			result.PushedAuthRequests++
+		}
+	}
+
 	if delErr != nil {
 		return result, delErr
 	}
@@ -771,6 +788,22 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
 		newToken.ObjectMeta = r.ObjectMeta
 		return cli.put(resourceDeviceToken, r.ObjectMeta.Name, newToken)
 	})
+}
+
+func (cli *client) CreatePushedAuthRequest(ctx context.Context, p storage.PushedAuthRequest) error {
+	return cli.post(resourcePushedAuthRequest, cli.fromStoragePushedAuthRequest(p))
+}
+
+func (cli *client) GetPushedAuthRequest(ctx context.Context, id string) (storage.PushedAuthRequest, error) {
+	var req PushedAuthRequest
+	if err := cli.get(resourcePushedAuthRequest, id, &req); err != nil {
+		return storage.PushedAuthRequest{}, err
+	}
+	return toStoragePushedAuthRequest(req), nil
+}
+
+func (cli *client) DeletePushedAuthRequest(ctx context.Context, id string) error {
+	return cli.delete(resourcePushedAuthRequest, id)
 }
 
 func (cli *client) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {

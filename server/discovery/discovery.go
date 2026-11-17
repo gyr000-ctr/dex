@@ -59,7 +59,9 @@ type Document struct {
 	UserInfo       string `json:"userinfo_endpoint"`
 	DeviceEndpoint string `json:"device_authorization_endpoint"`
 	Introspect     string `json:"introspection_endpoint"`
-	EndSession     string `json:"end_session_endpoint,omitempty"`
+	// PAR is the pushed authorization request endpoint (RFC 9126 §5).
+	PAR        string `json:"pushed_authorization_request_endpoint"`
+	EndSession string `json:"end_session_endpoint,omitempty"`
 	// BackchannelLogout and BackchannelLogoutSession advertise OIDC Back-Channel
 	// Logout 1.0. Both are omitted rather than sent as false when sessions are off,
 	// matching how end_session_endpoint disappears with them.
@@ -175,6 +177,7 @@ func (h *Handler) construct(ctx context.Context) (Document, error) {
 		UserInfo:          h.IssuerURL.AbsURL("/userinfo"),
 		DeviceEndpoint:    h.IssuerURL.AbsURL("/device/code"),
 		Introspect:        h.IssuerURL.AbsURL("/token/introspect"),
+		PAR:               h.IssuerURL.AbsURL("/auth/par"),
 		Subjects:          []string{"public"},
 		IDTokenAlgs:       []string{string(jose.RS256)},
 		CodeChallengeAlgs: h.PKCEMethods,

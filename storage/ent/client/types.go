@@ -181,6 +181,15 @@ func toStorageDeviceRequest(r *db.DeviceRequest) storage.DeviceRequest {
 	}
 }
 
+func toStoragePushedAuthRequest(p *db.PushedAuthRequest) storage.PushedAuthRequest {
+	return storage.PushedAuthRequest{
+		ID:       p.ID,
+		ClientID: p.ClientID,
+		Params:   p.Params,
+		Expiry:   p.Expiry,
+	}
+}
+
 func toStorageUserIdentity(u *db.UserIdentity) storage.UserIdentity {
 	s := storage.UserIdentity{
 		UserID:      u.UserID,

@@ -301,6 +301,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
 			SupportedResponseTypes: rc.responseTypes,
 			PKCE:                   c.PKCE,
 			AuthRequestsValidFor:   rc.authRequestsValidFor,
+			PARRequestsValidFor:    rc.parRequestsValidFor,
 			Sessions:               sessions,
 			Issuer:                 s.issuer,
 			MFAEnabled:             len(c.MFAProviders) > 0,
@@ -403,7 +404,7 @@ func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Dura
 					s.logger.InfoContext(ctx, "garbage collection run, delete auth",
 						"requests", r.AuthRequests, "auth_codes", r.AuthCodes,
 						"device_requests", r.DeviceRequests, "device_tokens", r.DeviceTokens,
-						"auth_sessions", r.AuthSessions)
+						"auth_sessions", r.AuthSessions, "pushed_auth_requests", r.PushedAuthRequests)
 				}
 			}
 		}

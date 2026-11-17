@@ -51,6 +51,14 @@ func (h *Handler) handleAuthorization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A request carrying a request_uri continues a pushed authorization
+	// request (RFC 9126 §4): the pinned parameters replace the request's own.
+	if r.Form.Get("request_uri") != "" {
+		if !h.resolveRequestURI(w, r) {
+			return
+		}
+	}
+
 	connectorID := r.Form.Get("connector_id")
 	allConnectors, err := h.Storage.ListConnectors(ctx)
 	if err != nil {

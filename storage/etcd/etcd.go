@@ -24,6 +24,7 @@ const (
 	keysName             = "openid-connect-keys"
 	deviceRequestPrefix  = "device_req/"
 	deviceTokenPrefix    = "device_token/"
+	pushedAuthReqPrefix  = "pushed_auth_req/"
 	userIdentityPrefix   = "user_identity/"
 	authSessionPrefix    = "auth_session/"
 
@@ -122,6 +123,21 @@ func (c *conn) GarbageCollect(ctx context.Context, now time.Time) (result storag
 			} else {
 				result.AuthSessions++
 			}
+		}
+	}
+
+	pushedAuthRequests, err := c.listPushedAuthRequests(ctx)
+	if err != nil {
+		return result, err
+	}
+
+	for _, pushedAuthRequest := range pushedAuthRequests {
+		if now.After(pushedAuthRequest.Expiry) {
+			if err := c.deleteKey(ctx, keyID(pushedAuthReqPrefix, pushedAuthRequest.ID)); err != nil {
+				c.logger.Error("failed to delete pushed auth request", "err", err)
+				delErr = fmt.Errorf("failed to delete pushed auth request: %v", err)
+			}
+			result.PushedAuthRequests++
 		}
 	}
 
@@ -780,4 +796,39 @@ func (c *conn) UpdateDeviceToken(ctx context.Context, deviceCode string, updater
 		}
 		return json.Marshal(fromStorageDeviceToken(updated))
 	})
+}
+
+func (c *conn) CreatePushedAuthRequest(ctx context.Context, p storage.PushedAuthRequest) error {
+	return c.txnCreate(ctx, keyID(pushedAuthReqPrefix, p.ID), fromStoragePushedAuthRequest(p))
+}
+
+func (c *conn) GetPushedAuthRequest(ctx context.Context, id string) (p storage.PushedAuthRequest, err error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultStorageTimeout)
+	defer cancel()
+	var par PushedAuthRequest
+	if err = c.getKey(ctx, keyID(pushedAuthReqPrefix, id), &par); err == nil {
+		p = toStoragePushedAuthRequest(par)
+	}
+	return
+}
+
+func (c *conn) DeletePushedAuthRequest(ctx context.Context, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultStorageTimeout)
+	defer cancel()
+	return c.deleteKey(ctx, keyID(pushedAuthReqPrefix, id))
+}
+
+func (c *conn) listPushedAuthRequests(ctx context.Context) (requests []PushedAuthRequest, err error) {
+	res, err := c.db.Get(ctx, pushedAuthReqPrefix, clientv3.WithPrefix())
+	if err != nil {
+		return requests, err
+	}
+	for _, v := range res.Kvs {
+		var r PushedAuthRequest
+		if err = json.Unmarshal(v.Value, &r); err != nil {
+			return requests, err
+		}
+		requests = append(requests, r)
+	}
+	return requests, nil
 }

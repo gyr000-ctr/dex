@@ -27,6 +27,7 @@ func New(logger *slog.Logger) storage.Storage {
 		connectors:      make(map[string]storage.Connector),
 		deviceRequests:  make(map[string]storage.DeviceRequest),
 		deviceTokens:    make(map[string]storage.DeviceToken),
+		pushedAuthReqs:  make(map[string]storage.PushedAuthRequest),
 		logger:          logger,
 	}
 }
@@ -56,6 +57,7 @@ type memStorage struct {
 	connectors      map[string]storage.Connector
 	deviceRequests  map[string]storage.DeviceRequest
 	deviceTokens    map[string]storage.DeviceToken
+	pushedAuthReqs  map[string]storage.PushedAuthRequest
 
 	keys storage.Keys
 
@@ -105,6 +107,12 @@ func (s *memStorage) GarbageCollect(ctx context.Context, now time.Time) (result 
 			if now.After(a.AbsoluteExpiry) || now.After(a.IdleExpiry) {
 				delete(s.authSessions, id)
 				result.AuthSessions++
+			}
+		}
+		for id, a := range s.pushedAuthReqs {
+			if now.After(a.Expiry) {
+				delete(s.pushedAuthReqs, id)
+				result.PushedAuthRequests++
 			}
 		}
 	})
@@ -676,6 +684,39 @@ func (s *memStorage) UpdateDeviceToken(ctx context.Context, deviceCode string, u
 		if r, err = updater(r); err == nil {
 			s.deviceTokens[deviceCode] = r
 		}
+	})
+	return
+}
+
+func (s *memStorage) CreatePushedAuthRequest(ctx context.Context, p storage.PushedAuthRequest) (err error) {
+	s.tx(func() {
+		if _, ok := s.pushedAuthReqs[p.ID]; ok {
+			err = storage.ErrAlreadyExists
+		} else {
+			s.pushedAuthReqs[p.ID] = p
+		}
+	})
+	return
+}
+
+func (s *memStorage) GetPushedAuthRequest(ctx context.Context, id string) (p storage.PushedAuthRequest, err error) {
+	s.tx(func() {
+		var ok bool
+		if p, ok = s.pushedAuthReqs[id]; !ok {
+			err = storage.ErrNotFound
+			return
+		}
+	})
+	return
+}
+
+func (s *memStorage) DeletePushedAuthRequest(ctx context.Context, id string) (err error) {
+	s.tx(func() {
+		if _, ok := s.pushedAuthReqs[id]; !ok {
+			err = storage.ErrNotFound
+			return
+		}
+		delete(s.pushedAuthReqs, id)
 	})
 	return
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
 	"github.com/dexidp/dex/storage/ent/db/offlinesession"
 	"github.com/dexidp/dex/storage/ent/db/password"
+	"github.com/dexidp/dex/storage/ent/db/pushedauthrequest"
 	"github.com/dexidp/dex/storage/ent/db/refreshtoken"
 	"github.com/dexidp/dex/storage/ent/db/useridentity"
 	"github.com/dexidp/dex/storage/ent/schema"
@@ -248,6 +249,16 @@ func init() {
 	passwordDescUserID := passwordFields[6].Descriptor()
 	// password.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
 	password.UserIDValidator = passwordDescUserID.Validators[0].(func(string) error)
+	pushedauthrequestFields := schema.PushedAuthRequest{}.Fields()
+	_ = pushedauthrequestFields
+	// pushedauthrequestDescClientID is the schema descriptor for client_id field.
+	pushedauthrequestDescClientID := pushedauthrequestFields[1].Descriptor()
+	// pushedauthrequest.ClientIDValidator is a validator for the "client_id" field. It is called by the builders before save.
+	pushedauthrequest.ClientIDValidator = pushedauthrequestDescClientID.Validators[0].(func(string) error)
+	// pushedauthrequestDescID is the schema descriptor for id field.
+	pushedauthrequestDescID := pushedauthrequestFields[0].Descriptor()
+	// pushedauthrequest.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	pushedauthrequest.IDValidator = pushedauthrequestDescID.Validators[0].(func(string) error)
 	refreshtokenFields := schema.RefreshToken{}.Fields()
 	_ = refreshtokenFields
 	// refreshtokenDescClientID is the schema descriptor for client_id field.

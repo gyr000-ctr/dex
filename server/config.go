@@ -68,6 +68,7 @@ type Config struct {
 	IDTokensValidFor       time.Duration // Defaults to 24 hours
 	AuthRequestsValidFor   time.Duration // Defaults to 24 hours
 	DeviceRequestsValidFor time.Duration // Defaults to 5 minutes
+	PARRequestsValidFor    time.Duration // Defaults to 1 minute
 
 	// Refresh token expiration settings
 	RefreshTokenPolicy *tokens.RefreshStrategy
@@ -163,6 +164,7 @@ type resolvedConfig struct {
 
 	authRequestsValidFor   time.Duration
 	deviceRequestsValidFor time.Duration
+	parRequestsValidFor    time.Duration
 	idTokensValidFor       time.Duration
 
 	templates *templates.Templates
@@ -224,6 +226,7 @@ func normalizeConfig(c *Config) (resolvedConfig, error) {
 		grantTypes:             grantTypes,
 		authRequestsValidFor:   value(c.AuthRequestsValidFor, 24*time.Hour),
 		deviceRequestsValidFor: value(c.DeviceRequestsValidFor, 5*time.Minute),
+		parRequestsValidFor:    value(c.PARRequestsValidFor, time.Minute),
 		idTokensValidFor:       value(c.IDTokensValidFor, 24*time.Hour),
 		templates:              tmpls,
 		static:                 static,

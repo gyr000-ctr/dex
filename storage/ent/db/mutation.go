@@ -23,6 +23,7 @@ import (
 	"github.com/dexidp/dex/storage/ent/db/offlinesession"
 	"github.com/dexidp/dex/storage/ent/db/password"
 	"github.com/dexidp/dex/storage/ent/db/predicate"
+	"github.com/dexidp/dex/storage/ent/db/pushedauthrequest"
 	"github.com/dexidp/dex/storage/ent/db/refreshtoken"
 	"github.com/dexidp/dex/storage/ent/db/useridentity"
 	jose "github.com/go-jose/go-jose/v4"
@@ -37,18 +38,19 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAuthCode       = "AuthCode"
-	TypeAuthRequest    = "AuthRequest"
-	TypeAuthSession    = "AuthSession"
-	TypeConnector      = "Connector"
-	TypeDeviceRequest  = "DeviceRequest"
-	TypeDeviceToken    = "DeviceToken"
-	TypeKeys           = "Keys"
-	TypeOAuth2Client   = "OAuth2Client"
-	TypeOfflineSession = "OfflineSession"
-	TypePassword       = "Password"
-	TypeRefreshToken   = "RefreshToken"
-	TypeUserIdentity   = "UserIdentity"
+	TypeAuthCode          = "AuthCode"
+	TypeAuthRequest       = "AuthRequest"
+	TypeAuthSession       = "AuthSession"
+	TypeConnector         = "Connector"
+	TypeDeviceRequest     = "DeviceRequest"
+	TypeDeviceToken       = "DeviceToken"
+	TypeKeys              = "Keys"
+	TypeOAuth2Client      = "OAuth2Client"
+	TypeOfflineSession    = "OfflineSession"
+	TypePassword          = "Password"
+	TypePushedAuthRequest = "PushedAuthRequest"
+	TypeRefreshToken      = "RefreshToken"
+	TypeUserIdentity      = "UserIdentity"
 )
 
 // AuthCodeMutation represents an operation that mutates the AuthCode nodes in the graph.
@@ -9204,6 +9206,468 @@ func (m *PasswordMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *PasswordMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Password edge %s", name)
+}
+
+// PushedAuthRequestMutation represents an operation that mutates the PushedAuthRequest nodes in the graph.
+type PushedAuthRequestMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *string
+	client_id     *string
+	params        *map[string][]string
+	expiry        *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*PushedAuthRequest, error)
+	predicates    []predicate.PushedAuthRequest
+}
+
+var _ ent.Mutation = (*PushedAuthRequestMutation)(nil)
+
+// pushedauthrequestOption allows management of the mutation configuration using functional options.
+type pushedauthrequestOption func(*PushedAuthRequestMutation)
+
+// newPushedAuthRequestMutation creates new mutation for the PushedAuthRequest entity.
+func newPushedAuthRequestMutation(c config, op Op, opts ...pushedauthrequestOption) *PushedAuthRequestMutation {
+	m := &PushedAuthRequestMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePushedAuthRequest,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPushedAuthRequestID sets the ID field of the mutation.
+func withPushedAuthRequestID(id string) pushedauthrequestOption {
+	return func(m *PushedAuthRequestMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PushedAuthRequest
+		)
+		m.oldValue = func(ctx context.Context) (*PushedAuthRequest, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PushedAuthRequest.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPushedAuthRequest sets the old PushedAuthRequest of the mutation.
+func withPushedAuthRequest(node *PushedAuthRequest) pushedauthrequestOption {
+	return func(m *PushedAuthRequestMutation) {
+		m.oldValue = func(context.Context) (*PushedAuthRequest, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PushedAuthRequestMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PushedAuthRequestMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of PushedAuthRequest entities.
+func (m *PushedAuthRequestMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PushedAuthRequestMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PushedAuthRequestMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PushedAuthRequest.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetClientID sets the "client_id" field.
+func (m *PushedAuthRequestMutation) SetClientID(s string) {
+	m.client_id = &s
+}
+
+// ClientID returns the value of the "client_id" field in the mutation.
+func (m *PushedAuthRequestMutation) ClientID() (r string, exists bool) {
+	v := m.client_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClientID returns the old "client_id" field's value of the PushedAuthRequest entity.
+// If the PushedAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PushedAuthRequestMutation) OldClientID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClientID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClientID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClientID: %w", err)
+	}
+	return oldValue.ClientID, nil
+}
+
+// ResetClientID resets all changes to the "client_id" field.
+func (m *PushedAuthRequestMutation) ResetClientID() {
+	m.client_id = nil
+}
+
+// SetParams sets the "params" field.
+func (m *PushedAuthRequestMutation) SetParams(value map[string][]string) {
+	m.params = &value
+}
+
+// Params returns the value of the "params" field in the mutation.
+func (m *PushedAuthRequestMutation) Params() (r map[string][]string, exists bool) {
+	v := m.params
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParams returns the old "params" field's value of the PushedAuthRequest entity.
+// If the PushedAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PushedAuthRequestMutation) OldParams(ctx context.Context) (v map[string][]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParams is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParams requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParams: %w", err)
+	}
+	return oldValue.Params, nil
+}
+
+// ClearParams clears the value of the "params" field.
+func (m *PushedAuthRequestMutation) ClearParams() {
+	m.params = nil
+	m.clearedFields[pushedauthrequest.FieldParams] = struct{}{}
+}
+
+// ParamsCleared returns if the "params" field was cleared in this mutation.
+func (m *PushedAuthRequestMutation) ParamsCleared() bool {
+	_, ok := m.clearedFields[pushedauthrequest.FieldParams]
+	return ok
+}
+
+// ResetParams resets all changes to the "params" field.
+func (m *PushedAuthRequestMutation) ResetParams() {
+	m.params = nil
+	delete(m.clearedFields, pushedauthrequest.FieldParams)
+}
+
+// SetExpiry sets the "expiry" field.
+func (m *PushedAuthRequestMutation) SetExpiry(t time.Time) {
+	m.expiry = &t
+}
+
+// Expiry returns the value of the "expiry" field in the mutation.
+func (m *PushedAuthRequestMutation) Expiry() (r time.Time, exists bool) {
+	v := m.expiry
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiry returns the old "expiry" field's value of the PushedAuthRequest entity.
+// If the PushedAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PushedAuthRequestMutation) OldExpiry(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiry: %w", err)
+	}
+	return oldValue.Expiry, nil
+}
+
+// ResetExpiry resets all changes to the "expiry" field.
+func (m *PushedAuthRequestMutation) ResetExpiry() {
+	m.expiry = nil
+}
+
+// Where appends a list predicates to the PushedAuthRequestMutation builder.
+func (m *PushedAuthRequestMutation) Where(ps ...predicate.PushedAuthRequest) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PushedAuthRequestMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PushedAuthRequestMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PushedAuthRequest, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PushedAuthRequestMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PushedAuthRequestMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PushedAuthRequest).
+func (m *PushedAuthRequestMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PushedAuthRequestMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.client_id != nil {
+		fields = append(fields, pushedauthrequest.FieldClientID)
+	}
+	if m.params != nil {
+		fields = append(fields, pushedauthrequest.FieldParams)
+	}
+	if m.expiry != nil {
+		fields = append(fields, pushedauthrequest.FieldExpiry)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PushedAuthRequestMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case pushedauthrequest.FieldClientID:
+		return m.ClientID()
+	case pushedauthrequest.FieldParams:
+		return m.Params()
+	case pushedauthrequest.FieldExpiry:
+		return m.Expiry()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PushedAuthRequestMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case pushedauthrequest.FieldClientID:
+		return m.OldClientID(ctx)
+	case pushedauthrequest.FieldParams:
+		return m.OldParams(ctx)
+	case pushedauthrequest.FieldExpiry:
+		return m.OldExpiry(ctx)
+	}
+	return nil, fmt.Errorf("unknown PushedAuthRequest field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PushedAuthRequestMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case pushedauthrequest.FieldClientID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClientID(v)
+		return nil
+	case pushedauthrequest.FieldParams:
+		v, ok := value.(map[string][]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParams(v)
+		return nil
+	case pushedauthrequest.FieldExpiry:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiry(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PushedAuthRequest field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PushedAuthRequestMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PushedAuthRequestMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PushedAuthRequestMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PushedAuthRequest numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PushedAuthRequestMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(pushedauthrequest.FieldParams) {
+		fields = append(fields, pushedauthrequest.FieldParams)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PushedAuthRequestMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PushedAuthRequestMutation) ClearField(name string) error {
+	switch name {
+	case pushedauthrequest.FieldParams:
+		m.ClearParams()
+		return nil
+	}
+	return fmt.Errorf("unknown PushedAuthRequest nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PushedAuthRequestMutation) ResetField(name string) error {
+	switch name {
+	case pushedauthrequest.FieldClientID:
+		m.ResetClientID()
+		return nil
+	case pushedauthrequest.FieldParams:
+		m.ResetParams()
+		return nil
+	case pushedauthrequest.FieldExpiry:
+		m.ResetExpiry()
+		return nil
+	}
+	return fmt.Errorf("unknown PushedAuthRequest field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PushedAuthRequestMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PushedAuthRequestMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PushedAuthRequestMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PushedAuthRequestMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PushedAuthRequestMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PushedAuthRequestMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PushedAuthRequestMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PushedAuthRequest unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PushedAuthRequestMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PushedAuthRequest edge %s", name)
 }
 
 // RefreshTokenMutation represents an operation that mutates the RefreshToken nodes in the graph.

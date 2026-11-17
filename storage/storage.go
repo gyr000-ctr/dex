@@ -57,11 +57,12 @@ func NewHMACKey(h crypto.Hash) []byte {
 
 // GCResult returns the number of objects deleted by garbage collection.
 type GCResult struct {
-	AuthRequests   int64
-	AuthCodes      int64
-	DeviceRequests int64
-	DeviceTokens   int64
-	AuthSessions   int64
+	AuthRequests       int64
+	AuthCodes          int64
+	DeviceRequests     int64
+	DeviceTokens       int64
+	AuthSessions       int64
+	PushedAuthRequests int64
 }
 
 // IsEmpty returns whether the garbage collection result is empty or not.
@@ -70,7 +71,8 @@ func (g *GCResult) IsEmpty() bool {
 		g.AuthCodes == 0 &&
 		g.DeviceRequests == 0 &&
 		g.DeviceTokens == 0 &&
-		g.AuthSessions == 0
+		g.AuthSessions == 0 &&
+		g.PushedAuthRequests == 0
 }
 
 // Storage is the storage interface used by the server. Implementations are
@@ -91,6 +93,7 @@ type Storage interface {
 	CreateConnector(ctx context.Context, c Connector) error
 	CreateDeviceRequest(ctx context.Context, d DeviceRequest) error
 	CreateDeviceToken(ctx context.Context, d DeviceToken) error
+	CreatePushedAuthRequest(ctx context.Context, p PushedAuthRequest) error
 
 	// TODO(ericchiang): return (T, bool, error) so we can indicate not found
 	// requests that way instead of using ErrNotFound.
@@ -106,6 +109,7 @@ type Storage interface {
 	GetConnector(ctx context.Context, id string) (Connector, error)
 	GetDeviceRequest(ctx context.Context, userCode string) (DeviceRequest, error)
 	GetDeviceToken(ctx context.Context, deviceCode string) (DeviceToken, error)
+	GetPushedAuthRequest(ctx context.Context, id string) (PushedAuthRequest, error)
 
 	ListClients(ctx context.Context) ([]Client, error)
 	ListRefreshTokens(ctx context.Context) ([]RefreshToken, error)
@@ -124,6 +128,7 @@ type Storage interface {
 	DeleteUserIdentity(ctx context.Context, userID, connectorID string) error
 	DeleteAuthSession(ctx context.Context, id string) error
 	DeleteConnector(ctx context.Context, id string) error
+	DeletePushedAuthRequest(ctx context.Context, id string) error
 
 	// Update methods take a function for updating an object then performs that update within
 	// a transaction. "updater" functions may be called multiple times by a single update call.
@@ -151,7 +156,7 @@ type Storage interface {
 	UpdateDeviceToken(ctx context.Context, deviceCode string, updater func(t DeviceToken) (DeviceToken, error)) error
 
 	// GarbageCollect deletes all expired AuthCodes,
-	// AuthRequests, DeviceRequests, and DeviceTokens.
+	// AuthRequests, DeviceRequests, DeviceTokens, and PushedAuthRequests.
 	GarbageCollect(ctx context.Context, now time.Time) (GCResult, error)
 }
 
@@ -341,6 +346,28 @@ type AuthRequest struct {
 	// WebAuthnSessionData stores temporary WebAuthn ceremony data (challenge, etc.)
 	// between Begin and Finish calls. JSON-encoded webauthn.SessionData.
 	WebAuthnSessionData []byte
+}
+
+// PushedAuthRequest is an authorization request a client posted to the pushed
+// authorization request endpoint (RFC 9126) instead of sending it through the
+// browser. The browser later carries only the reference (request_uri); the
+// parameters are replayed from this record. A record is deleted on first use
+// and garbage collected once expired, so references are single-use and cannot
+// pile up.
+type PushedAuthRequest struct {
+	// ID is the random reference the request_uri names.
+	ID string
+
+	// ClientID is the client that pushed the request. The authorization
+	// request that redeems the reference must name the same client.
+	ClientID string
+
+	// Params are the query parameters of the would-be authorization request
+	// (client_id, redirect_uri, scope, response_type, code_challenge, ...),
+	// stored as received. The client secret is never stored here.
+	Params map[string][]string
+
+	Expiry time.Time
 }
 
 // AuthCode represents a code which can be exchanged for an OAuth2 token response.

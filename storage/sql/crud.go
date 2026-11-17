@@ -129,6 +129,14 @@ func (c *conn) GarbageCollect(ctc context.Context, now time.Time) (storage.GCRes
 		result.AuthSessions = n
 	}
 
+	r, err = c.Exec(`delete from pushed_auth_request where expiry < $1`, now)
+	if err != nil {
+		return result, fmt.Errorf("gc pushed_auth_request: %v", err)
+	}
+	if n, err := r.RowsAffected(); err == nil {
+		result.PushedAuthRequests = n
+	}
+
 	return result, nil
 }
 
@@ -1432,4 +1440,45 @@ func (c *conn) UpdateDeviceToken(ctx context.Context, deviceCode string, updater
 		}
 		return nil
 	})
+}
+
+func (c *conn) CreatePushedAuthRequest(ctx context.Context, p storage.PushedAuthRequest) error {
+	_, err := c.Exec(`
+		insert into pushed_auth_request (
+			id, client_id, params, expiry
+		)
+		values (
+			$1, $2, $3, $4
+		);`,
+		p.ID, p.ClientID, encoder(p.Params), p.Expiry,
+	)
+	if err != nil {
+		if c.alreadyExistsCheck(err) {
+			return storage.ErrAlreadyExists
+		}
+		return fmt.Errorf("insert pushed auth request: %v", err)
+	}
+	return nil
+}
+
+func (c *conn) GetPushedAuthRequest(ctx context.Context, id string) (p storage.PushedAuthRequest, err error) {
+	err = c.QueryRow(`
+		select
+			client_id, params, expiry
+		from pushed_auth_request where id = $1;
+	`, id).Scan(
+		&p.ClientID, decoder(&p.Params), &p.Expiry,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return p, storage.ErrNotFound
+		}
+		return p, fmt.Errorf("select pushed auth request: %v", err)
+	}
+	p.ID = id
+	return p, nil
+}
+
+func (c *conn) DeletePushedAuthRequest(ctx context.Context, id string) error {
+	return c.delete("pushed_auth_request", "id", id)
 }

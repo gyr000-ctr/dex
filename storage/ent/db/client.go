@@ -24,6 +24,7 @@ import (
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
 	"github.com/dexidp/dex/storage/ent/db/offlinesession"
 	"github.com/dexidp/dex/storage/ent/db/password"
+	"github.com/dexidp/dex/storage/ent/db/pushedauthrequest"
 	"github.com/dexidp/dex/storage/ent/db/refreshtoken"
 	"github.com/dexidp/dex/storage/ent/db/useridentity"
 )
@@ -53,6 +54,8 @@ type Client struct {
 	OfflineSession *OfflineSessionClient
 	// Password is the client for interacting with the Password builders.
 	Password *PasswordClient
+	// PushedAuthRequest is the client for interacting with the PushedAuthRequest builders.
+	PushedAuthRequest *PushedAuthRequestClient
 	// RefreshToken is the client for interacting with the RefreshToken builders.
 	RefreshToken *RefreshTokenClient
 	// UserIdentity is the client for interacting with the UserIdentity builders.
@@ -78,6 +81,7 @@ func (c *Client) init() {
 	c.OAuth2Client = NewOAuth2ClientClient(c.config)
 	c.OfflineSession = NewOfflineSessionClient(c.config)
 	c.Password = NewPasswordClient(c.config)
+	c.PushedAuthRequest = NewPushedAuthRequestClient(c.config)
 	c.RefreshToken = NewRefreshTokenClient(c.config)
 	c.UserIdentity = NewUserIdentityClient(c.config)
 }
@@ -170,20 +174,21 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		AuthCode:       NewAuthCodeClient(cfg),
-		AuthRequest:    NewAuthRequestClient(cfg),
-		AuthSession:    NewAuthSessionClient(cfg),
-		Connector:      NewConnectorClient(cfg),
-		DeviceRequest:  NewDeviceRequestClient(cfg),
-		DeviceToken:    NewDeviceTokenClient(cfg),
-		Keys:           NewKeysClient(cfg),
-		OAuth2Client:   NewOAuth2ClientClient(cfg),
-		OfflineSession: NewOfflineSessionClient(cfg),
-		Password:       NewPasswordClient(cfg),
-		RefreshToken:   NewRefreshTokenClient(cfg),
-		UserIdentity:   NewUserIdentityClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthCode:          NewAuthCodeClient(cfg),
+		AuthRequest:       NewAuthRequestClient(cfg),
+		AuthSession:       NewAuthSessionClient(cfg),
+		Connector:         NewConnectorClient(cfg),
+		DeviceRequest:     NewDeviceRequestClient(cfg),
+		DeviceToken:       NewDeviceTokenClient(cfg),
+		Keys:              NewKeysClient(cfg),
+		OAuth2Client:      NewOAuth2ClientClient(cfg),
+		OfflineSession:    NewOfflineSessionClient(cfg),
+		Password:          NewPasswordClient(cfg),
+		PushedAuthRequest: NewPushedAuthRequestClient(cfg),
+		RefreshToken:      NewRefreshTokenClient(cfg),
+		UserIdentity:      NewUserIdentityClient(cfg),
 	}, nil
 }
 
@@ -201,20 +206,21 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		AuthCode:       NewAuthCodeClient(cfg),
-		AuthRequest:    NewAuthRequestClient(cfg),
-		AuthSession:    NewAuthSessionClient(cfg),
-		Connector:      NewConnectorClient(cfg),
-		DeviceRequest:  NewDeviceRequestClient(cfg),
-		DeviceToken:    NewDeviceTokenClient(cfg),
-		Keys:           NewKeysClient(cfg),
-		OAuth2Client:   NewOAuth2ClientClient(cfg),
-		OfflineSession: NewOfflineSessionClient(cfg),
-		Password:       NewPasswordClient(cfg),
-		RefreshToken:   NewRefreshTokenClient(cfg),
-		UserIdentity:   NewUserIdentityClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		AuthCode:          NewAuthCodeClient(cfg),
+		AuthRequest:       NewAuthRequestClient(cfg),
+		AuthSession:       NewAuthSessionClient(cfg),
+		Connector:         NewConnectorClient(cfg),
+		DeviceRequest:     NewDeviceRequestClient(cfg),
+		DeviceToken:       NewDeviceTokenClient(cfg),
+		Keys:              NewKeysClient(cfg),
+		OAuth2Client:      NewOAuth2ClientClient(cfg),
+		OfflineSession:    NewOfflineSessionClient(cfg),
+		Password:          NewPasswordClient(cfg),
+		PushedAuthRequest: NewPushedAuthRequestClient(cfg),
+		RefreshToken:      NewRefreshTokenClient(cfg),
+		UserIdentity:      NewUserIdentityClient(cfg),
 	}, nil
 }
 
@@ -246,7 +252,7 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuthCode, c.AuthRequest, c.AuthSession, c.Connector, c.DeviceRequest,
 		c.DeviceToken, c.Keys, c.OAuth2Client, c.OfflineSession, c.Password,
-		c.RefreshToken, c.UserIdentity,
+		c.PushedAuthRequest, c.RefreshToken, c.UserIdentity,
 	} {
 		n.Use(hooks...)
 	}
@@ -258,7 +264,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuthCode, c.AuthRequest, c.AuthSession, c.Connector, c.DeviceRequest,
 		c.DeviceToken, c.Keys, c.OAuth2Client, c.OfflineSession, c.Password,
-		c.RefreshToken, c.UserIdentity,
+		c.PushedAuthRequest, c.RefreshToken, c.UserIdentity,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -287,6 +293,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.OfflineSession.mutate(ctx, m)
 	case *PasswordMutation:
 		return c.Password.mutate(ctx, m)
+	case *PushedAuthRequestMutation:
+		return c.PushedAuthRequest.mutate(ctx, m)
 	case *RefreshTokenMutation:
 		return c.RefreshToken.mutate(ctx, m)
 	case *UserIdentityMutation:
@@ -1626,6 +1634,139 @@ func (c *PasswordClient) mutate(ctx context.Context, m *PasswordMutation) (Value
 	}
 }
 
+// PushedAuthRequestClient is a client for the PushedAuthRequest schema.
+type PushedAuthRequestClient struct {
+	config
+}
+
+// NewPushedAuthRequestClient returns a client for the PushedAuthRequest from the given config.
+func NewPushedAuthRequestClient(c config) *PushedAuthRequestClient {
+	return &PushedAuthRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pushedauthrequest.Hooks(f(g(h())))`.
+func (c *PushedAuthRequestClient) Use(hooks ...Hook) {
+	c.hooks.PushedAuthRequest = append(c.hooks.PushedAuthRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pushedauthrequest.Intercept(f(g(h())))`.
+func (c *PushedAuthRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PushedAuthRequest = append(c.inters.PushedAuthRequest, interceptors...)
+}
+
+// Create returns a builder for creating a PushedAuthRequest entity.
+func (c *PushedAuthRequestClient) Create() *PushedAuthRequestCreate {
+	mutation := newPushedAuthRequestMutation(c.config, OpCreate)
+	return &PushedAuthRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PushedAuthRequest entities.
+func (c *PushedAuthRequestClient) CreateBulk(builders ...*PushedAuthRequestCreate) *PushedAuthRequestCreateBulk {
+	return &PushedAuthRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PushedAuthRequestClient) MapCreateBulk(slice any, setFunc func(*PushedAuthRequestCreate, int)) *PushedAuthRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PushedAuthRequestCreateBulk{err: fmt.Errorf("calling to PushedAuthRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PushedAuthRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PushedAuthRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PushedAuthRequest.
+func (c *PushedAuthRequestClient) Update() *PushedAuthRequestUpdate {
+	mutation := newPushedAuthRequestMutation(c.config, OpUpdate)
+	return &PushedAuthRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PushedAuthRequestClient) UpdateOne(_m *PushedAuthRequest) *PushedAuthRequestUpdateOne {
+	mutation := newPushedAuthRequestMutation(c.config, OpUpdateOne, withPushedAuthRequest(_m))
+	return &PushedAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PushedAuthRequestClient) UpdateOneID(id string) *PushedAuthRequestUpdateOne {
+	mutation := newPushedAuthRequestMutation(c.config, OpUpdateOne, withPushedAuthRequestID(id))
+	return &PushedAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PushedAuthRequest.
+func (c *PushedAuthRequestClient) Delete() *PushedAuthRequestDelete {
+	mutation := newPushedAuthRequestMutation(c.config, OpDelete)
+	return &PushedAuthRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PushedAuthRequestClient) DeleteOne(_m *PushedAuthRequest) *PushedAuthRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PushedAuthRequestClient) DeleteOneID(id string) *PushedAuthRequestDeleteOne {
+	builder := c.Delete().Where(pushedauthrequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PushedAuthRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for PushedAuthRequest.
+func (c *PushedAuthRequestClient) Query() *PushedAuthRequestQuery {
+	return &PushedAuthRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePushedAuthRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PushedAuthRequest entity by its id.
+func (c *PushedAuthRequestClient) Get(ctx context.Context, id string) (*PushedAuthRequest, error) {
+	return c.Query().Where(pushedauthrequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PushedAuthRequestClient) GetX(ctx context.Context, id string) *PushedAuthRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PushedAuthRequestClient) Hooks() []Hook {
+	return c.hooks.PushedAuthRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *PushedAuthRequestClient) Interceptors() []Interceptor {
+	return c.inters.PushedAuthRequest
+}
+
+func (c *PushedAuthRequestClient) mutate(ctx context.Context, m *PushedAuthRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PushedAuthRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PushedAuthRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PushedAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PushedAuthRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown PushedAuthRequest mutation op: %q", m.Op())
+	}
+}
+
 // RefreshTokenClient is a client for the RefreshToken schema.
 type RefreshTokenClient struct {
 	config
@@ -1896,11 +2037,12 @@ func (c *UserIdentityClient) mutate(ctx context.Context, m *UserIdentityMutation
 type (
 	hooks struct {
 		AuthCode, AuthRequest, AuthSession, Connector, DeviceRequest, DeviceToken, Keys,
-		OAuth2Client, OfflineSession, Password, RefreshToken, UserIdentity []ent.Hook
+		OAuth2Client, OfflineSession, Password, PushedAuthRequest, RefreshToken,
+		UserIdentity []ent.Hook
 	}
 	inters struct {
 		AuthCode, AuthRequest, AuthSession, Connector, DeviceRequest, DeviceToken, Keys,
-		OAuth2Client, OfflineSession, Password, RefreshToken,
+		OAuth2Client, OfflineSession, Password, PushedAuthRequest, RefreshToken,
 		UserIdentity []ent.Interceptor
 	}
 )

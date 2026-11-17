@@ -260,6 +260,23 @@ func customResourceDefinitions(apiVersion string) []k8sapi.CustomResourceDefinit
 				},
 			},
 		},
+		{
+			ObjectMeta: k8sapi.ObjectMeta{
+				Name: "pushedauthrequests.dex.coreos.com",
+			},
+			TypeMeta: crdMeta,
+			Spec: k8sapi.CustomResourceDefinitionSpec{
+				Group:    apiGroup,
+				Version:  version,
+				Versions: versions,
+				Scope:    scope,
+				Names: k8sapi.CustomResourceDefinitionNames{
+					Plural:   "pushedauthrequests",
+					Singular: "pushedauthrequest",
+					Kind:     "PushedAuthRequest",
+				},
+			},
+		},
 	}
 }
 
@@ -892,6 +909,49 @@ func toStorageDeviceRequest(req DeviceRequest) storage.DeviceRequest {
 		ClientSecret: req.ClientSecret,
 		Scopes:       req.Scopes,
 		Expiry:       req.Expiry,
+	}
+}
+
+// PushedAuthRequest is a mirrored struct from storage with JSON struct tags and
+// Kubernetes type metadata.
+type PushedAuthRequest struct {
+	k8sapi.TypeMeta   `json:",inline"`
+	k8sapi.ObjectMeta `json:"metadata,omitempty"`
+
+	ClientID string              `json:"client_id,omitempty"`
+	Params   map[string][]string `json:"params,omitempty"`
+	Expiry   time.Time           `json:"expiry"`
+}
+
+// PushedAuthRequestList is a list of PushedAuthRequests.
+type PushedAuthRequestList struct {
+	k8sapi.TypeMeta    `json:",inline"`
+	k8sapi.ListMeta    `json:"metadata,omitempty"`
+	PushedAuthRequests []PushedAuthRequest `json:"items"`
+}
+
+func (cli *client) fromStoragePushedAuthRequest(p storage.PushedAuthRequest) PushedAuthRequest {
+	return PushedAuthRequest{
+		TypeMeta: k8sapi.TypeMeta{
+			Kind:       kindPushedAuthRequest,
+			APIVersion: cli.apiVersion,
+		},
+		ObjectMeta: k8sapi.ObjectMeta{
+			Name:      p.ID,
+			Namespace: cli.namespace,
+		},
+		ClientID: p.ClientID,
+		Params:   p.Params,
+		Expiry:   p.Expiry,
+	}
+}
+
+func toStoragePushedAuthRequest(p PushedAuthRequest) storage.PushedAuthRequest {
+	return storage.PushedAuthRequest{
+		ID:       p.ObjectMeta.Name,
+		ClientID: p.ClientID,
+		Params:   p.Params,
+		Expiry:   p.Expiry,
 	}
 }
 

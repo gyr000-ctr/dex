@@ -22,6 +22,7 @@ import (
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
 	"github.com/dexidp/dex/storage/ent/db/offlinesession"
 	"github.com/dexidp/dex/storage/ent/db/password"
+	"github.com/dexidp/dex/storage/ent/db/pushedauthrequest"
 	"github.com/dexidp/dex/storage/ent/db/refreshtoken"
 	"github.com/dexidp/dex/storage/ent/db/useridentity"
 )
@@ -84,18 +85,19 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			authcode.Table:       authcode.ValidColumn,
-			authrequest.Table:    authrequest.ValidColumn,
-			authsession.Table:    authsession.ValidColumn,
-			connector.Table:      connector.ValidColumn,
-			devicerequest.Table:  devicerequest.ValidColumn,
-			devicetoken.Table:    devicetoken.ValidColumn,
-			keys.Table:           keys.ValidColumn,
-			oauth2client.Table:   oauth2client.ValidColumn,
-			offlinesession.Table: offlinesession.ValidColumn,
-			password.Table:       password.ValidColumn,
-			refreshtoken.Table:   refreshtoken.ValidColumn,
-			useridentity.Table:   useridentity.ValidColumn,
+			authcode.Table:          authcode.ValidColumn,
+			authrequest.Table:       authrequest.ValidColumn,
+			authsession.Table:       authsession.ValidColumn,
+			connector.Table:         connector.ValidColumn,
+			devicerequest.Table:     devicerequest.ValidColumn,
+			devicetoken.Table:       devicetoken.ValidColumn,
+			keys.Table:              keys.ValidColumn,
+			oauth2client.Table:      oauth2client.ValidColumn,
+			offlinesession.Table:    offlinesession.ValidColumn,
+			password.Table:          password.ValidColumn,
+			pushedauthrequest.Table: pushedauthrequest.ValidColumn,
+			refreshtoken.Table:      refreshtoken.ValidColumn,
+			useridentity.Table:      useridentity.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

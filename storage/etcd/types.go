@@ -416,6 +416,32 @@ func toStorageDeviceRequest(d DeviceRequest) storage.DeviceRequest {
 	}
 }
 
+// PushedAuthRequest is a mirrored struct from storage with JSON struct tags
+type PushedAuthRequest struct {
+	ID       string              `json:"id"`
+	ClientID string              `json:"client_id"`
+	Params   map[string][]string `json:"params"`
+	Expiry   time.Time           `json:"expiry"`
+}
+
+func fromStoragePushedAuthRequest(p storage.PushedAuthRequest) PushedAuthRequest {
+	return PushedAuthRequest{
+		ID:       p.ID,
+		ClientID: p.ClientID,
+		Params:   p.Params,
+		Expiry:   p.Expiry,
+	}
+}
+
+func toStoragePushedAuthRequest(p PushedAuthRequest) storage.PushedAuthRequest {
+	return storage.PushedAuthRequest{
+		ID:       p.ID,
+		ClientID: p.ClientID,
+		Params:   p.Params,
+		Expiry:   p.Expiry,
+	}
+}
+
 // DeviceToken is a mirrored struct from storage with JSON struct tags
 type DeviceToken struct {
 	DeviceCode          string    `json:"device_code"`

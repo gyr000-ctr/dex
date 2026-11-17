@@ -22,7 +22,7 @@ func TestGarbageCollectConcurrentDelete(t *testing.T) {
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	resources := []string{
 		resourceAuthRequest, resourceAuthCode, resourceDeviceRequest,
-		resourceDeviceToken, resourceAuthSession,
+		resourceDeviceToken, resourceAuthSession, resourcePushedAuthRequest,
 	}
 
 	for _, resource := range resources {
@@ -150,6 +150,8 @@ func gcTestResult(resource string) storage.GCResult {
 		return storage.GCResult{DeviceTokens: 1}
 	case resourceAuthSession:
 		return storage.GCResult{AuthSessions: 1}
+	case resourcePushedAuthRequest:
+		return storage.GCResult{PushedAuthRequests: 1}
 	default:
 		panic("unexpected garbage collection resource")
 	}

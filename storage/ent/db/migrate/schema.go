@@ -210,6 +210,19 @@ var (
 		Columns:    PasswordsColumns,
 		PrimaryKey: []*schema.Column{PasswordsColumns[0]},
 	}
+	// PushedAuthRequestsColumns holds the columns for the "pushed_auth_requests" table.
+	PushedAuthRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, Size: 2147483647, SchemaType: map[string]string{"mysql": "varchar(384)", "postgres": "text", "sqlite3": "text"}},
+		{Name: "client_id", Type: field.TypeString, Size: 2147483647, SchemaType: map[string]string{"mysql": "varchar(384)", "postgres": "text", "sqlite3": "text"}},
+		{Name: "params", Type: field.TypeJSON, Nullable: true},
+		{Name: "expiry", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime(3)", "postgres": "timestamptz", "sqlite3": "timestamp"}},
+	}
+	// PushedAuthRequestsTable holds the schema information for the "pushed_auth_requests" table.
+	PushedAuthRequestsTable = &schema.Table{
+		Name:       "pushed_auth_requests",
+		Columns:    PushedAuthRequestsColumns,
+		PrimaryKey: []*schema.Column{PushedAuthRequestsColumns[0]},
+	}
 	// RefreshTokensColumns holds the columns for the "refresh_tokens" table.
 	RefreshTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, Size: 2147483647, SchemaType: map[string]string{"mysql": "varchar(384)", "postgres": "text", "sqlite3": "text"}},
@@ -271,6 +284,7 @@ var (
 		Oauth2clientsTable,
 		OfflineSessionsTable,
 		PasswordsTable,
+		PushedAuthRequestsTable,
 		RefreshTokensTable,
 		UserIdentitiesTable,
 	}

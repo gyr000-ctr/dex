@@ -32,6 +32,8 @@ type Tx struct {
 	OfflineSession *OfflineSessionClient
 	// Password is the client for interacting with the Password builders.
 	Password *PasswordClient
+	// PushedAuthRequest is the client for interacting with the PushedAuthRequest builders.
+	PushedAuthRequest *PushedAuthRequestClient
 	// RefreshToken is the client for interacting with the RefreshToken builders.
 	RefreshToken *RefreshTokenClient
 	// UserIdentity is the client for interacting with the UserIdentity builders.
@@ -177,6 +179,7 @@ func (tx *Tx) init() {
 	tx.OAuth2Client = NewOAuth2ClientClient(tx.config)
 	tx.OfflineSession = NewOfflineSessionClient(tx.config)
 	tx.Password = NewPasswordClient(tx.config)
+	tx.PushedAuthRequest = NewPushedAuthRequestClient(tx.config)
 	tx.RefreshToken = NewRefreshTokenClient(tx.config)
 	tx.UserIdentity = NewUserIdentityClient(tx.config)
 }

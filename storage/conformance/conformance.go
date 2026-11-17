@@ -57,6 +57,7 @@ func RunTests(t *testing.T, newStorage func(t *testing.T) storage.Storage) {
 		{"TimezoneSupport", testTimezones},
 		{"DeviceRequestCRUD", testDeviceRequestCRUD},
 		{"DeviceTokenCRUD", testDeviceTokenCRUD},
+		{"PushedAuthRequestCRUD", testPushedAuthRequestCRUD},
 		{"UserIdentityCRUD", testUserIdentityCRUD},
 		{"AuthSessionCRUD", testAuthSessionCRUD},
 		{"AuthSessionLogoutState", testAuthSessionLogoutState},
@@ -1112,6 +1113,40 @@ func testGC(t *testing.T, s storage.Storage) {
 		t.Errorf("expected storage.ErrNotFound, got %v", err)
 	}
 
+	par := storage.PushedAuthRequest{
+		ID:       storage.NewID(),
+		ClientID: "client1",
+		Params:   map[string][]string{"client_id": {"client1"}},
+		Expiry:   expiry,
+	}
+
+	if err := s.CreatePushedAuthRequest(ctx, par); err != nil {
+		t.Fatalf("failed creating pushed auth request: %v", err)
+	}
+
+	for _, tz := range []*time.Location{time.UTC, est, pst} {
+		result, err := s.GarbageCollect(ctx, expiry.Add(-time.Hour).In(tz))
+		if err != nil {
+			t.Errorf("garbage collection failed: %v", err)
+		} else if result.PushedAuthRequests != 0 {
+			t.Errorf("expected no pushed auth request garbage collection results, got %#v", result)
+		}
+		if _, err := s.GetPushedAuthRequest(ctx, par.ID); err != nil {
+			t.Errorf("expected to be able to get pushed auth request after GC: %v", err)
+		}
+	}
+	if r, err := s.GarbageCollect(ctx, expiry.Add(time.Hour)); err != nil {
+		t.Errorf("garbage collection failed: %v", err)
+	} else if r.PushedAuthRequests != 1 {
+		t.Errorf("expected to garbage collect 1 pushed auth request, got %d", r.PushedAuthRequests)
+	}
+
+	if _, err := s.GetPushedAuthRequest(ctx, par.ID); err == nil {
+		t.Errorf("expected pushed auth request to be GC'd")
+	} else if err != storage.ErrNotFound {
+		t.Errorf("expected storage.ErrNotFound, got %v", err)
+	}
+
 	// Test auth session GC.
 	authSession := storage.AuthSession{
 		ID:          storage.NewID(),
@@ -1294,6 +1329,51 @@ func testDeviceRequestCRUD(t *testing.T, s storage.Storage) {
 
 	// No manual deletes for device requests, will be handled by garbage collection routines
 	// see testGC
+}
+
+func testPushedAuthRequestCRUD(t *testing.T, s storage.Storage) {
+	ctx := t.Context()
+	p1 := storage.PushedAuthRequest{
+		ID:       storage.NewID(),
+		ClientID: "client1",
+		Params: map[string][]string{
+			"client_id":             {"client1"},
+			"redirect_uri":          {"https://client.example.com/callback"},
+			"response_type":         {"code"},
+			"scope":                 {"openid email"},
+			"code_challenge":        {"challenge"},
+			"code_challenge_method": {"S256"},
+		},
+		Expiry: neverExpire.Round(time.Second),
+	}
+
+	if err := s.CreatePushedAuthRequest(ctx, p1); err != nil {
+		t.Fatalf("failed creating pushed auth request: %v", err)
+	}
+
+	// Attempt to create same PushedAuthRequest twice.
+	err := s.CreatePushedAuthRequest(ctx, p1)
+	mustBeErrAlreadyExists(t, "pushed auth request", err)
+
+	got, err := s.GetPushedAuthRequest(ctx, p1.ID)
+	if err != nil {
+		t.Fatalf("failed to get pushed auth request: %v", err)
+	}
+
+	// Normalize to UTC before comparing, matching the other CRUD tests: backends
+	// preserve the instant, not the time.Location.
+	got.Expiry = got.Expiry.UTC()
+
+	require.Equal(t, p1, got)
+
+	// A pushed auth request is single-use: delete consumes the reference.
+	if err := s.DeletePushedAuthRequest(ctx, p1.ID); err != nil {
+		t.Fatalf("failed to delete pushed auth request: %v", err)
+	}
+	if _, err := s.GetPushedAuthRequest(ctx, p1.ID); err != storage.ErrNotFound {
+		t.Errorf("expected storage.ErrNotFound after delete, got %v", err)
+	}
+	mustBeErrNotFound(t, "pushed auth request", s.DeletePushedAuthRequest(ctx, p1.ID))
 }
 
 func testDeviceTokenCRUD(t *testing.T, s storage.Storage) {
