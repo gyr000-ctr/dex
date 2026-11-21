@@ -48,6 +48,10 @@ type Handler struct {
 	DefaultMFAChain []string
 	// SkipApproval disables the consent screen server-wide (see consent.Satisfied).
 	SkipApproval bool
+
+	// HTTPClient fetches a request_uri reference for a signed request object
+	// (RFC 9101). Nil uses http.DefaultClient.
+	HTTPClient *http.Client
 }
 
 // Mount registers the login routes. The /auth endpoint is both the entry

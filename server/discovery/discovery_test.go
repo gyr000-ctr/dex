@@ -55,6 +55,10 @@ func TestConstruct(t *testing.T) {
 	require.Equal(t, []string{"authorization_code", "refresh_token"}, doc.GrantTypes)
 	require.Equal(t, []string{"S256", "plain"}, doc.CodeChallengeAlgs)
 	require.Equal(t, []string{string(jose.RS256)}, doc.IDTokenAlgs)
+	// Signed request objects advertise the algorithms the verifier accepts.
+	require.Contains(t, doc.RequestObjectSigningAlgs, string(jose.RS256))
+	require.Contains(t, doc.RequestObjectSigningAlgs, string(jose.ES256))
+	require.NotContains(t, doc.RequestObjectSigningAlgs, "none")
 	// end_session_endpoint is present only when sessions are enabled.
 	require.Equal(t, "https://dex.example.com/logout", doc.EndSession)
 }

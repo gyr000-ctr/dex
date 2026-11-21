@@ -14,6 +14,7 @@ import (
 	"github.com/dexidp/dex/storage"
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
 	"github.com/dexidp/dex/storage/ent/db/predicate"
+	jose "github.com/go-jose/go-jose/v4"
 )
 
 // OAuth2ClientUpdate is the builder for updating OAuth2Client entities.
@@ -245,6 +246,18 @@ func (_u *OAuth2ClientUpdate) ClearClientCredentialsClaims() *OAuth2ClientUpdate
 	return _u
 }
 
+// SetJwks sets the "jwks" field.
+func (_u *OAuth2ClientUpdate) SetJwks(v *jose.JSONWebKeySet) *OAuth2ClientUpdate {
+	_u.mutation.SetJwks(v)
+	return _u
+}
+
+// ClearJwks clears the value of the "jwks" field.
+func (_u *OAuth2ClientUpdate) ClearJwks() *OAuth2ClientUpdate {
+	_u.mutation.ClearJwks()
+	return _u
+}
+
 // Mutation returns the OAuth2ClientMutation object of the builder.
 func (_u *OAuth2ClientUpdate) Mutation() *OAuth2ClientMutation {
 	return _u.mutation
@@ -381,6 +394,12 @@ func (_u *OAuth2ClientUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.ClientCredentialsClaimsCleared() {
 		_spec.ClearField(oauth2client.FieldClientCredentialsClaims, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Jwks(); ok {
+		_spec.SetField(oauth2client.FieldJwks, field.TypeJSON, value)
+	}
+	if _u.mutation.JwksCleared() {
+		_spec.ClearField(oauth2client.FieldJwks, field.TypeJSON)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -618,6 +637,18 @@ func (_u *OAuth2ClientUpdateOne) ClearClientCredentialsClaims() *OAuth2ClientUpd
 	return _u
 }
 
+// SetJwks sets the "jwks" field.
+func (_u *OAuth2ClientUpdateOne) SetJwks(v *jose.JSONWebKeySet) *OAuth2ClientUpdateOne {
+	_u.mutation.SetJwks(v)
+	return _u
+}
+
+// ClearJwks clears the value of the "jwks" field.
+func (_u *OAuth2ClientUpdateOne) ClearJwks() *OAuth2ClientUpdateOne {
+	_u.mutation.ClearJwks()
+	return _u
+}
+
 // Mutation returns the OAuth2ClientMutation object of the builder.
 func (_u *OAuth2ClientUpdateOne) Mutation() *OAuth2ClientMutation {
 	return _u.mutation
@@ -784,6 +815,12 @@ func (_u *OAuth2ClientUpdateOne) sqlSave(ctx context.Context) (_node *OAuth2Clie
 	}
 	if _u.mutation.ClientCredentialsClaimsCleared() {
 		_spec.ClearField(oauth2client.FieldClientCredentialsClaims, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Jwks(); ok {
+		_spec.SetField(oauth2client.FieldJwks, field.TypeJSON, value)
+	}
+	if _u.mutation.JwksCleared() {
+		_spec.ClearField(oauth2client.FieldJwks, field.TypeJSON)
 	}
 	_node = &OAuth2Client{config: _u.config}
 	_spec.Assign = _node.assignValues

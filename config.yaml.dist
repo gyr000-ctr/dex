@@ -211,6 +211,26 @@ web:
 #       # The client's ID at an audience, when it differs from "wiki-app".
 #       audienceClientIDs:
 #         "https://chat.example/": "f53f191f9311af35"
+#
+#   # Example of a client that signs its authorization requests (RFC 9101).
+#   # jwks is a JWK Set of the client's public signing keys; a request object
+#   # passed in the "request" or "request_uri" authorization parameter is
+#   # accepted only if its JWS verifies against one of them. Without jwks the
+#   # client cannot use signed request objects.
+#   - id: signed-request-client
+#     secret: signed-request-secret
+#     redirectURIs:
+#       - 'https://signed.example.com/callback'
+#     name: 'Signed Request Client'
+#     jwks:
+#       keys:
+#         - kty: RSA
+#           kid: key-1
+#           use: sig
+#           alg: RS256
+#           # "n" must be quoted: an unquoted n is YAML 1.1's boolean false.
+#           "n": "nWwoxydjr1ihXg0jnflEoSwOwyR4VRvHJIkEFnFx8ibt6IQJE0oXdSY1RG0yUddTb0Wfgqwp_-sXHEjG_tQbOTLWQoW2f8wQIw_SF3eq5fhk_uwv_tGB980sMKQA3Er13FEr2qttbWn5xYaoglDgjNC6DmxFGjSgjJaRKZGeQ0zXmt38GSHmA3IIWps2GftWPRnSKXj27NPIhw-ZKLkAibCdm2zcqyzy5YCXitymhnGCnlT6LQUCbKaZ0ocbnAY4Ttb-pg5toYMq-jps9tdn58ETT9hBsoagY7x8fy-nZZgdg_CNwqfBnCRbqLeeFJRUR00fbSaxjRIsf1RtMz54Sw"
+#           "e": "AQAB"
 
 # Connectors are used to authenticate users against upstream identity providers.
 #

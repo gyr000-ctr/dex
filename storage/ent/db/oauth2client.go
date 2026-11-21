@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/dexidp/dex/storage"
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
+	jose "github.com/go-jose/go-jose/v4"
 )
 
 // OAuth2Client is the model entity for the OAuth2Client schema.
@@ -44,7 +45,9 @@ type OAuth2Client struct {
 	RefreshTokenLifetime string `json:"refresh_token_lifetime,omitempty"`
 	// ClientCredentialsClaims holds the value of the "client_credentials_claims" field.
 	ClientCredentialsClaims *storage.ClientCredentialsClaims `json:"client_credentials_claims,omitempty"`
-	selectValues            sql.SelectValues
+	// Jwks holds the value of the "jwks" field.
+	Jwks         *jose.JSONWebKeySet `json:"jwks,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -52,7 +55,7 @@ func (*OAuth2Client) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case oauth2client.FieldRedirectUris, oauth2client.FieldTrustedPeers, oauth2client.FieldAllowedConnectors, oauth2client.FieldMfaChain, oauth2client.FieldPostLogoutRedirectUris, oauth2client.FieldSSOSharedWith, oauth2client.FieldClientCredentialsClaims:
+		case oauth2client.FieldRedirectUris, oauth2client.FieldTrustedPeers, oauth2client.FieldAllowedConnectors, oauth2client.FieldMfaChain, oauth2client.FieldPostLogoutRedirectUris, oauth2client.FieldSSOSharedWith, oauth2client.FieldClientCredentialsClaims, oauth2client.FieldJwks:
 			values[i] = new([]byte)
 		case oauth2client.FieldPublic:
 			values[i] = new(sql.NullBool)
@@ -171,6 +174,14 @@ func (_m *OAuth2Client) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field client_credentials_claims: %w", err)
 				}
 			}
+		case oauth2client.FieldJwks:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field jwks", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Jwks); err != nil {
+					return fmt.Errorf("unmarshal field jwks: %w", err)
+				}
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -245,6 +256,9 @@ func (_m *OAuth2Client) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("client_credentials_claims=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ClientCredentialsClaims))
+	builder.WriteString(", ")
+	builder.WriteString("jwks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Jwks))
 	builder.WriteByte(')')
 	return builder.String()
 }

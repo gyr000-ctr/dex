@@ -517,6 +517,16 @@ func ClientCredentialsClaimsNotNil() predicate.OAuth2Client {
 	return predicate.OAuth2Client(sql.FieldNotNull(FieldClientCredentialsClaims))
 }
 
+// JwksIsNil applies the IsNil predicate on the "jwks" field.
+func JwksIsNil() predicate.OAuth2Client {
+	return predicate.OAuth2Client(sql.FieldIsNull(FieldJwks))
+}
+
+// JwksNotNil applies the NotNil predicate on the "jwks" field.
+func JwksNotNil() predicate.OAuth2Client {
+	return predicate.OAuth2Client(sql.FieldNotNull(FieldJwks))
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.OAuth2Client) predicate.OAuth2Client {
 	return predicate.OAuth2Client(sql.AndPredicates(predicates...))

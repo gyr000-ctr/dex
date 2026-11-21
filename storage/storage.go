@@ -218,6 +218,14 @@ type Client struct {
 	// client_credentials grant. Kept separate from core Client fields to avoid mixing
 	// application identity (ID, secret, redirect URIs) with user-like identity attributes.
 	ClientCredentialsClaims *ClientCredentialsClaims `json:"clientCredentialsClaims,omitempty"`
+
+	// JWKS is the set of public keys the client registered for itself. A signed
+	// request object (RFC 9101) carried in the "request" or "request_uri"
+	// authorization parameter is only accepted when its JWS signature verifies
+	// against one of these keys; a client without a key set cannot use signed
+	// request objects. Only public keys belong here — private or symmetric
+	// material is ignored when a request object is verified.
+	JWKS *jose.JSONWebKeySet `json:"jwks,omitempty"`
 }
 
 // Refresh token lifetimes, the values Client.RefreshTokenLifetime accepts.

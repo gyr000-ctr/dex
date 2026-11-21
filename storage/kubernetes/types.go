@@ -297,6 +297,10 @@ type Client struct {
 	BackchannelLogoutURI string `json:"backchannelLogoutURI,omitempty"`
 
 	RefreshTokenLifetime string `json:"refreshTokenLifetime,omitempty"`
+
+	// JWKS is the client's registered key set for signed request objects
+	// (RFC 9101).
+	JWKS *jose.JSONWebKeySet `json:"jwks,omitempty"`
 }
 
 // ClientList is a list of Clients.
@@ -329,6 +333,7 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
 		SSOSharedWith:          c.SSOSharedWith,
 		BackchannelLogoutURI:   c.BackchannelLogoutURI,
 		RefreshTokenLifetime:   c.RefreshTokenLifetime,
+		JWKS:                   c.JWKS,
 	}
 }
 
@@ -347,6 +352,7 @@ func toStorageClient(c Client) storage.Client {
 		SSOSharedWith:          c.SSOSharedWith,
 		BackchannelLogoutURI:   c.BackchannelLogoutURI,
 		RefreshTokenLifetime:   c.RefreshTokenLifetime,
+		JWKS:                   c.JWKS,
 	}
 }
 

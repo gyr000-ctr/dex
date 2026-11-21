@@ -2,6 +2,7 @@ package apiserver
 
 import (
 	"bytes"
+	"encoding/json"
 	"log/slog"
 	"net"
 	"slices"
@@ -9,8 +10,11 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/dexidp/dex/api/v2"
 	"github.com/dexidp/dex/server/internal"
@@ -1862,4 +1866,57 @@ func TestSessionsIdentitiesValidation(t *testing.T) {
 	if _, err := client.RevokeConsent(ctx, &api.RevokeConsentReq{UserId: "u", ConnectorId: "c"}); err == nil {
 		t.Error("RevokeConsent should reject empty client_id")
 	}
+}
+
+// A client's request object key set round-trips through the API, and a
+// malformed or non-public key set is refused rather than stored.
+func TestClientJWKS(t *testing.T) {
+	logger := newLogger(t)
+	s := memory.New(logger)
+	client := newAPI(t, s, logger)
+	defer client.Close()
+	ctx := t.Context()
+
+	const publicKey = `{"keys":[{"kty":"RSA","kid":"key-1","use":"sig","alg":"RS256","n":"nWwoxydjr1ihXg0jnflEoSwOwyR4VRvHJIkEFnFx8ibt6IQJE0oXdSY1RG0yUddTb0Wfgqwp_-sXHEjG_tQbOTLWQoW2f8wQIw_SF3eq5fhk_uwv_tGB980sMKQA3Er13FEr2qttbWn5xYaoglDgjNC6DmxFGjSgjJaRKZGeQ0zXmt38GSHmA3IIWps2GftWPRnSKXj27NPIhw-ZKLkAibCdm2zcqyzy5YCXitymhnGCnlT6LQUCbKaZ0ocbnAY4Ttb-pg5toYMq-jps9tdn58ETT9hBsoagY7x8fy-nZZgdg_CNwqfBnCRbqLeeFJRUR00fbSaxjRIsf1RtMz54Sw","e":"AQAB"}]}`
+
+	_, err := client.CreateClient(ctx, &api.CreateClientReq{
+		Client: &api.Client{
+			Id:           "with-keys",
+			Public:       true,
+			RedirectUris: []string{"https://client.example.com/cb"},
+			Name:         "with keys",
+			Jwks:         publicKey,
+		},
+	})
+	require.NoError(t, err)
+
+	stored, err := s.GetClient(ctx, "with-keys")
+	require.NoError(t, err)
+	require.NotNil(t, stored.JWKS)
+	require.Len(t, stored.JWKS.Keys, 1)
+	require.Equal(t, "key-1", stored.JWKS.Keys[0].KeyID)
+
+	got, err := client.GetClient(ctx, &api.GetClientReq{Id: "with-keys"})
+	require.NoError(t, err)
+	var returned jose.JSONWebKeySet
+	require.NoError(t, json.Unmarshal([]byte(got.Client.Jwks), &returned))
+	require.Len(t, returned.Keys, 1)
+	require.Equal(t, "key-1", returned.Keys[0].KeyID)
+
+	// Updating with an explicit empty value clears the key set.
+	empty := ""
+	_, err = client.UpdateClient(ctx, &api.UpdateClientReq{Id: "with-keys", Jwks: &empty})
+	require.NoError(t, err)
+	stored, err = s.GetClient(ctx, "with-keys")
+	require.NoError(t, err)
+	require.Nil(t, stored.JWKS)
+
+	// A private key has no business in a client registration.
+	privateKey := `{"keys":[{"kty":"RSA","kid":"key-1","d":"AQAB","n":"nWwoxydjr1ihXg0jnflEoSwOwyR4VRvHJIkEFnFx8ibt6IQJE0oXdSY1RG0yUddTb0Wfgqwp_-sXHEjG_tQbOTLWQoW2f8wQIw_SF3eq5fhk_uwv_tGB980sMKQA3Er13FEr2qttbWn5xYaoglDgjNC6DmxFGjSgjJaRKZGeQ0zXmt38GSHmA3IIWps2GftWPRnSKXj27NPIhw-ZKLkAibCdm2zcqyzy5YCXitymhnGCnlT6LQUCbKaZ0ocbnAY4Ttb-pg5toYMq-jps9tdn58ETT9hBsoagY7x8fy-nZZgdg_CNwqfBnCRbqLeeFJRUR00fbSaxjRIsf1RtMz54Sw","e":"AQAB"}]}`
+	_, err = client.UpdateClient(ctx, &api.UpdateClientReq{Id: "with-keys", Jwks: &privateKey})
+	require.Error(t, err)
+
+	malformed := "{not json"
+	_, err = client.UpdateClient(ctx, &api.UpdateClientReq{Id: "with-keys", Jwks: &malformed})
+	require.Error(t, err)
 }

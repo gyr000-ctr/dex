@@ -171,6 +171,7 @@ var (
 		{Name: "backchannel_logout_uri", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "", SchemaType: map[string]string{"mysql": "varchar(384)", "postgres": "text", "sqlite3": "text"}},
 		{Name: "refresh_token_lifetime", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "", SchemaType: map[string]string{"mysql": "varchar(384)", "postgres": "text", "sqlite3": "text"}},
 		{Name: "client_credentials_claims", Type: field.TypeJSON, Nullable: true},
+		{Name: "jwks", Type: field.TypeJSON, Nullable: true},
 	}
 	// Oauth2clientsTable holds the schema information for the "oauth2clients" table.
 	Oauth2clientsTable = &schema.Table{

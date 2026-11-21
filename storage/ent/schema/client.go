@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	jose "github.com/go-jose/go-jose/v4"
 
 	"github.com/dexidp/dex/storage"
 )
@@ -61,6 +62,8 @@ func (OAuth2Client) Fields() []ent.Field {
 			Default("").
 			Optional(),
 		field.JSON("client_credentials_claims", &storage.ClientCredentialsClaims{}).
+			Optional(),
+		field.JSON("jwks", &jose.JSONWebKeySet{}).
 			Optional(),
 	}
 }

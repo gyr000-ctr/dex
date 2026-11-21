@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/dexidp/dex/storage"
 	"github.com/dexidp/dex/storage/ent/db/oauth2client"
+	jose "github.com/go-jose/go-jose/v4"
 )
 
 // OAuth2ClientCreate is the builder for creating a OAuth2Client entity.
@@ -111,6 +112,12 @@ func (_c *OAuth2ClientCreate) SetNillableRefreshTokenLifetime(v *string) *OAuth2
 // SetClientCredentialsClaims sets the "client_credentials_claims" field.
 func (_c *OAuth2ClientCreate) SetClientCredentialsClaims(v *storage.ClientCredentialsClaims) *OAuth2ClientCreate {
 	_c.mutation.SetClientCredentialsClaims(v)
+	return _c
+}
+
+// SetJwks sets the "jwks" field.
+func (_c *OAuth2ClientCreate) SetJwks(v *jose.JSONWebKeySet) *OAuth2ClientCreate {
+	_c.mutation.SetJwks(v)
 	return _c
 }
 
@@ -270,6 +277,10 @@ func (_c *OAuth2ClientCreate) createSpec() (*OAuth2Client, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.ClientCredentialsClaims(); ok {
 		_spec.SetField(oauth2client.FieldClientCredentialsClaims, field.TypeJSON, value)
 		_node.ClientCredentialsClaims = value
+	}
+	if value, ok := _c.mutation.Jwks(); ok {
+		_spec.SetField(oauth2client.FieldJwks, field.TypeJSON, value)
+		_node.Jwks = value
 	}
 	return _node, _spec
 }

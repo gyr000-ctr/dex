@@ -26,6 +26,10 @@ message Client {
   // Whether this client's refresh tokens outlive the browser session that
   // issued them: "standalone" (the default) or "session".
   string refresh_token_lifetime = 12;
+  // The JWK Set of public keys the client signs its authorization request
+  // objects with (RFC 9101). A client without one cannot use the "request" or
+  // "request_uri" authorization parameters.
+  string jwks = 13;
 }
 
 // ClientInfo represents an OAuth2 client without sensitive information.
@@ -41,6 +45,9 @@ message ClientInfo {
   string backchannel_logout_uri = 9;
   repeated string post_logout_redirect_uris = 10;
   string refresh_token_lifetime = 11;
+  // The client's request object key set (RFC 9101). Public information: the
+  // discovery API exists to let clients inspect their own registration.
+  string jwks = 12;
 }
 
 // GetClientReq is a request to retrieve client details.
@@ -94,6 +101,9 @@ message UpdateClientReq {
     // to be tellable apart from "leave it alone" to put a client back on the
     // default lifetime.
     optional string refresh_token_lifetime = 10;
+    // Optional for the same reason: an empty value clears the client's request
+    // object keys so it can no longer use signed authorization requests.
+    optional string jwks = 11;
 }
 
 // UpdateClientResp returns the response from updating a client.

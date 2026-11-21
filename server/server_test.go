@@ -586,7 +586,10 @@ func makeOAuth2Tests(clientID string, clientSecret string, now func() time.Time)
 				},
 			},
 			{
-				name: "Request parameter in authorization query",
+				// A client with no registered keys cannot use signed request
+				// objects; the request parameter is refused as unsupported, as
+				// it always was.
+				name: "Request parameter in authorization query without keys",
 				authCodeOptions: []xoauth2.AuthCodeOption{
 					xoauth2.SetAuthURLParam("request", "anything"),
 				},

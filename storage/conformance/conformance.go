@@ -330,6 +330,12 @@ func testClientCRUD(t *testing.T, s storage.Storage) {
 		BackchannelLogoutURI:   "https://auth.example.com/backchannel-logout",
 		PostLogoutRedirectURIs: []string{"https://auth.example.com/"},
 		RefreshTokenLifetime:   storage.RefreshTokenLifetimeSession,
+		JWKS: &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{
+			Key:       jsonWebKeys[0].Public.Key,
+			KeyID:     "request-object-key",
+			Algorithm: "RS256",
+			Use:       "sig",
+		}}},
 	}
 	err := s.DeleteClient(ctx, id1)
 	mustBeErrNotFound(t, "client", err)

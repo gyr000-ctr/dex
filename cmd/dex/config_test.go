@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -810,4 +812,48 @@ enablePasswordDB: true
 			}
 		})
 	}
+}
+
+func TestUnmarshalConfigClientJWKS(t *testing.T) {
+	rawConfig := []byte(`
+staticClients:
+- id: signed-app
+  secret: signed-secret
+  name: 'Signed Application'
+  jwks:
+    keys:
+    - kty: RSA
+      kid: key-1
+      use: sig
+      alg: RS256
+      "n": "nWwoxydjr1ihXg0jnflEoSwOwyR4VRvHJIkEFnFx8ibt6IQJE0oXdSY1RG0yUddTb0Wfgqwp_-sXHEjG_tQbOTLWQoW2f8wQIw_SF3eq5fhk_uwv_tGB980sMKQA3Er13FEr2qttbWn5xYaoglDgjNC6DmxFGjSgjJaRKZGeQ0zXmt38GSHmA3IIWps2GftWPRnSKXj27NPIhw-ZKLkAibCdm2zcqyzy5YCXitymhnGCnlT6LQUCbKaZ0ocbnAY4Ttb-pg5toYMq-jps9tdn58ETT9hBsoagY7x8fy-nZZgdg_CNwqfBnCRbqLeeFJRUR00fbSaxjRIsf1RtMz54Sw"
+      "e": "AQAB"
+`)
+
+	var c Config
+	require.NoError(t, yaml.Unmarshal(rawConfig, &c))
+	require.Len(t, c.StaticClients, 1)
+	require.NotNil(t, c.StaticClients[0].JWKS)
+	require.Len(t, c.StaticClients[0].JWKS.Keys, 1)
+	require.Equal(t, "key-1", c.StaticClients[0].JWKS.Keys[0].KeyID)
+
+	// A valid public key set is accepted by validation.
+	c.Issuer = "https://dex.example.com"
+	c.Storage = Storage{Type: "sqlite3", Config: &sql.SQLite3{File: "examples/dex.db"}}
+	c.Web = Web{HTTP: "0.0.0.0:5556"}
+	require.NoError(t, c.Validate())
+
+	// A private key has no business in a client registration.
+	c.StaticClients[0].JWKS.Keys[0] = jose.JSONWebKey{
+		Key:   testPrivateKey(t),
+		KeyID: "key-1",
+	}
+	require.ErrorContains(t, c.Validate(), "not a public key")
+}
+
+func testPrivateKey(t *testing.T) *rsa.PrivateKey {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	return key
 }

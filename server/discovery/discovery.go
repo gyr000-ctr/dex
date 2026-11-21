@@ -13,6 +13,7 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 
+	"github.com/dexidp/dex/server/authflow"
 	"github.com/dexidp/dex/server/oauth2"
 	"github.com/dexidp/dex/server/router"
 	"github.com/dexidp/dex/server/signer"
@@ -76,6 +77,11 @@ type Document struct {
 	// IdentityChainingTokenTypes advertises ID-JAG issuance
 	// (draft-ietf-oauth-identity-assertion-authz-grant §7.1).
 	IdentityChainingTokenTypes []string `json:"identity_chaining_requested_token_types_supported,omitempty"`
+	// RequestObjectSigningAlgs advertises the JWS algorithms accepted on a
+	// signed request object (RFC 9101 §9.2, RFC 8414). Request objects by value
+	// and by reference are both supported; encryption and JWE are not, so no
+	// request_object_encryption_* metadata is published.
+	RequestObjectSigningAlgs []string `json:"request_object_signing_alg_values_supported,omitempty"`
 }
 
 // Keys serves the JSON Web Key Set.
@@ -212,6 +218,10 @@ func (h *Handler) construct(ctx context.Context) (Document, error) {
 	if h.IDJAGEnabled {
 		d.IdentityChainingTokenTypes = []string{oauth2.TokenTypeIDJAG}
 	}
+
+	// Signed request objects (RFC 9101) are always accepted; the algorithms are
+	// those the verifier allows.
+	d.RequestObjectSigningAlgs = authflow.RequestObjectAlgorithmsSupported()
 
 	return d, err
 }

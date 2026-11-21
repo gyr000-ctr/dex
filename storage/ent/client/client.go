@@ -25,6 +25,9 @@ func (d *Database) CreateClient(ctx context.Context, client storage.Client) erro
 	if client.ClientCredentialsClaims != nil {
 		create = create.SetClientCredentialsClaims(client.ClientCredentialsClaims)
 	}
+	if client.JWKS != nil {
+		create = create.SetJwks(client.JWKS)
+	}
 	_, err := create.Save(ctx)
 	if err != nil {
 		return convertDBError("create oauth2 client: %w", err)
@@ -98,6 +101,11 @@ func (d *Database) UpdateClient(ctx context.Context, id string, updater func(old
 		update = update.SetClientCredentialsClaims(newClient.ClientCredentialsClaims)
 	} else {
 		update = update.ClearClientCredentialsClaims()
+	}
+	if newClient.JWKS != nil {
+		update = update.SetJwks(newClient.JWKS)
+	} else {
+		update = update.ClearJwks()
 	}
 	_, err = update.Save(ctx)
 	if err != nil {

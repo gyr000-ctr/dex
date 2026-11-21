@@ -6697,6 +6697,7 @@ type OAuth2ClientMutation struct {
 	backchannel_logout_uri          *string
 	refresh_token_lifetime          *string
 	client_credentials_claims       **storage.ClientCredentialsClaims
+	jwks                            **jose.JSONWebKeySet
 	clearedFields                   map[string]struct{}
 	done                            bool
 	oldValue                        func(context.Context) (*OAuth2Client, error)
@@ -7488,6 +7489,55 @@ func (m *OAuth2ClientMutation) ResetClientCredentialsClaims() {
 	delete(m.clearedFields, oauth2client.FieldClientCredentialsClaims)
 }
 
+// SetJwks sets the "jwks" field.
+func (m *OAuth2ClientMutation) SetJwks(jwks *jose.JSONWebKeySet) {
+	m.jwks = &jwks
+}
+
+// Jwks returns the value of the "jwks" field in the mutation.
+func (m *OAuth2ClientMutation) Jwks() (r *jose.JSONWebKeySet, exists bool) {
+	v := m.jwks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldJwks returns the old "jwks" field's value of the OAuth2Client entity.
+// If the OAuth2Client object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuth2ClientMutation) OldJwks(ctx context.Context) (v *jose.JSONWebKeySet, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldJwks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldJwks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldJwks: %w", err)
+	}
+	return oldValue.Jwks, nil
+}
+
+// ClearJwks clears the value of the "jwks" field.
+func (m *OAuth2ClientMutation) ClearJwks() {
+	m.jwks = nil
+	m.clearedFields[oauth2client.FieldJwks] = struct{}{}
+}
+
+// JwksCleared returns if the "jwks" field was cleared in this mutation.
+func (m *OAuth2ClientMutation) JwksCleared() bool {
+	_, ok := m.clearedFields[oauth2client.FieldJwks]
+	return ok
+}
+
+// ResetJwks resets all changes to the "jwks" field.
+func (m *OAuth2ClientMutation) ResetJwks() {
+	m.jwks = nil
+	delete(m.clearedFields, oauth2client.FieldJwks)
+}
+
 // Where appends a list predicates to the OAuth2ClientMutation builder.
 func (m *OAuth2ClientMutation) Where(ps ...predicate.OAuth2Client) {
 	m.predicates = append(m.predicates, ps...)
@@ -7522,7 +7572,7 @@ func (m *OAuth2ClientMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuth2ClientMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.secret != nil {
 		fields = append(fields, oauth2client.FieldSecret)
 	}
@@ -7562,6 +7612,9 @@ func (m *OAuth2ClientMutation) Fields() []string {
 	if m.client_credentials_claims != nil {
 		fields = append(fields, oauth2client.FieldClientCredentialsClaims)
 	}
+	if m.jwks != nil {
+		fields = append(fields, oauth2client.FieldJwks)
+	}
 	return fields
 }
 
@@ -7596,6 +7649,8 @@ func (m *OAuth2ClientMutation) Field(name string) (ent.Value, bool) {
 		return m.RefreshTokenLifetime()
 	case oauth2client.FieldClientCredentialsClaims:
 		return m.ClientCredentialsClaims()
+	case oauth2client.FieldJwks:
+		return m.Jwks()
 	}
 	return nil, false
 }
@@ -7631,6 +7686,8 @@ func (m *OAuth2ClientMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldRefreshTokenLifetime(ctx)
 	case oauth2client.FieldClientCredentialsClaims:
 		return m.OldClientCredentialsClaims(ctx)
+	case oauth2client.FieldJwks:
+		return m.OldJwks(ctx)
 	}
 	return nil, fmt.Errorf("unknown OAuth2Client field %s", name)
 }
@@ -7731,6 +7788,13 @@ func (m *OAuth2ClientMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetClientCredentialsClaims(v)
 		return nil
+	case oauth2client.FieldJwks:
+		v, ok := value.(*jose.JSONWebKeySet)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetJwks(v)
+		return nil
 	}
 	return fmt.Errorf("unknown OAuth2Client field %s", name)
 }
@@ -7788,6 +7852,9 @@ func (m *OAuth2ClientMutation) ClearedFields() []string {
 	if m.FieldCleared(oauth2client.FieldClientCredentialsClaims) {
 		fields = append(fields, oauth2client.FieldClientCredentialsClaims)
 	}
+	if m.FieldCleared(oauth2client.FieldJwks) {
+		fields = append(fields, oauth2client.FieldJwks)
+	}
 	return fields
 }
 
@@ -7828,6 +7895,9 @@ func (m *OAuth2ClientMutation) ClearField(name string) error {
 		return nil
 	case oauth2client.FieldClientCredentialsClaims:
 		m.ClearClientCredentialsClaims()
+		return nil
+	case oauth2client.FieldJwks:
+		m.ClearJwks()
 		return nil
 	}
 	return fmt.Errorf("unknown OAuth2Client nullable field %s", name)
@@ -7875,6 +7945,9 @@ func (m *OAuth2ClientMutation) ResetField(name string) error {
 		return nil
 	case oauth2client.FieldClientCredentialsClaims:
 		m.ResetClientCredentialsClaims()
+		return nil
+	case oauth2client.FieldJwks:
+		m.ResetJwks()
 		return nil
 	}
 	return fmt.Errorf("unknown OAuth2Client field %s", name)

@@ -37,6 +37,8 @@ const (
 	FieldRefreshTokenLifetime = "refresh_token_lifetime"
 	// FieldClientCredentialsClaims holds the string denoting the client_credentials_claims field in the database.
 	FieldClientCredentialsClaims = "client_credentials_claims"
+	// FieldJwks holds the string denoting the jwks field in the database.
+	FieldJwks = "jwks"
 	// Table holds the table name of the oauth2client in the database.
 	Table = "oauth2clients"
 )
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldBackchannelLogoutURI,
 	FieldRefreshTokenLifetime,
 	FieldClientCredentialsClaims,
+	FieldJwks,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

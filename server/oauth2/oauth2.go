@@ -8,17 +8,22 @@ const (
 	AccessDenied            = "access_denied"
 	UnsupportedResponseType = "unsupported_response_type"
 	RequestNotSupported     = "request_not_supported"
-	InvalidScope            = "invalid_scope"
-	ServerError             = "server_error"
-	TemporarilyUnavailable  = "temporarily_unavailable"
-	UnsupportedGrantType    = "unsupported_grant_type"
-	InvalidGrant            = "invalid_grant"
-	InvalidClient           = "invalid_client"
-	InvalidTarget           = "invalid_target"
-	InactiveToken           = "inactive_token"
-	LoginRequired           = "login_required"
-	InteractionRequired     = "interaction_required"
-	ConsentRequired         = "consent_required"
+	// InvalidRequestObject and InvalidRequestURI are the request-object errors
+	// from RFC 9101 §7.
+	InvalidRequestObject   = "invalid_request_object"
+	InvalidRequestURI      = "invalid_request_uri"
+	RequestURINotSupported = "request_uri_not_supported"
+	InvalidScope           = "invalid_scope"
+	ServerError            = "server_error"
+	TemporarilyUnavailable = "temporarily_unavailable"
+	UnsupportedGrantType   = "unsupported_grant_type"
+	InvalidGrant           = "invalid_grant"
+	InvalidClient          = "invalid_client"
+	InvalidTarget          = "invalid_target"
+	InactiveToken          = "inactive_token"
+	LoginRequired          = "login_required"
+	InteractionRequired    = "interaction_required"
+	ConsentRequired        = "consent_required"
 )
 
 // Grant types supported at the token endpoint.

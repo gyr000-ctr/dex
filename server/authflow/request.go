@@ -180,6 +180,13 @@ func (h *Handler) parseAuthorizationRequest(r *http.Request) (*storage.AuthReque
 	if err := r.ParseForm(); err != nil {
 		return nil, "", newDisplayedErr(http.StatusBadRequest, "Failed to parse request.")
 	}
+	// A signed request object replaces the URL's parameters with the verified
+	// ones (RFC 9101); afterwards the flow is the ordinary one.
+	if requestObjectPresent(r.Form) {
+		if err := h.resolveRequestObject(r); err != nil {
+			return nil, "", err
+		}
+	}
 	q := r.Form
 	// r.ParseForm already URL-decodes query values once; decoding redirect_uri a
 	// second time created a normalization differential with the token endpoint.
@@ -240,12 +247,6 @@ func (h *Handler) parseAuthorizationRequest(r *http.Request) (*storage.AuthReque
 		if !conns.ConnectorAllowed(client.AllowedConnectors, connectorID) {
 			return nil, "", newredirectedAuthErr(oauth2.InvalidRequest, "Connector not allowed for this client")
 		}
-	}
-
-	// dex doesn't support the request parameter and must return request_not_supported.
-	// https://openid.net/specs/openid-connect-core-1_0.html#6.1
-	if q.Get("request") != "" {
-		return nil, "", newredirectedAuthErr(oauth2.RequestNotSupported, "Server does not support request parameter.")
 	}
 
 	if codeChallenge != "" && !slices.Contains(h.PKCE.CodeChallengeMethodsSupported, codeChallengeMethod) {

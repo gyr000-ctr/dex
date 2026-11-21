@@ -512,4 +512,11 @@ var migrations = []migration{
 			`alter table auth_session add column connector_data bytea;`,
 		},
 	},
+	{
+		// The key set a client registers for signing its authorization request
+		// objects (RFC 9101).
+		stmts: []string{
+			`alter table client add column jwks bytea;`,
+		},
+	},
 }

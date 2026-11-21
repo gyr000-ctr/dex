@@ -145,6 +145,9 @@ func (c Config) Validate() error {
 		if err := storage.ValidateRefreshTokenLifetime(client.RefreshTokenLifetime); err != nil {
 			return fmt.Errorf("staticClients: client %q: %w", client.ID, err)
 		}
+		if err := validateClientJWKS(client.JWKS); err != nil {
+			return fmt.Errorf("staticClients: client %q: %w", client.ID, err)
+		}
 		if client.IDJAGPolicy != nil && !c.OAuth2.TokenExchange.idJAGEnabled() {
 			return fmt.Errorf("staticClients: client %q has idJAGPolicies but %s is not listed in oauth2.tokenExchange.tokenTypes", client.ID, oauth2.TokenTypeIDJAG)
 		}
@@ -212,6 +215,24 @@ func (c Config) validateMFA() error {
 		}
 	}
 
+	return nil
+}
+
+// validateClientJWKS checks a client's registered request object key set. A
+// request object is verified with these keys, so they must be usable public
+// keys; a private or symmetric key would silently never verify anything.
+func validateClientJWKS(jwks *jose.JSONWebKeySet) error {
+	if jwks == nil {
+		return nil
+	}
+	for i, key := range jwks.Keys {
+		if !key.Valid() {
+			return fmt.Errorf("jwks: key %d is not a valid JWK", i)
+		}
+		if !key.IsPublic() {
+			return fmt.Errorf("jwks: key %d is not a public key", i)
+		}
+	}
 	return nil
 }
 

@@ -51,6 +51,24 @@ func (h *Handler) handleAuthorization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A signed request object carries the authorization parameters in a form
+	// the browser cannot alter; verify it before any of them are used, and
+	// continue with the verified set.
+	if requestObjectPresent(r.Form) {
+		if err := h.resolveRequestObject(r); err != nil {
+			h.Logger.ErrorContext(r.Context(), "invalid signed authorization request", "err", err)
+			switch authErr := err.(type) {
+			case *redirectedAuthErr:
+				authErr.Handler().ServeHTTP(w, r)
+			case *displayedAuthErr:
+				h.renderError(r, w, authErr.Status, err.Error())
+			default:
+				h.renderError(r, w, http.StatusInternalServerError, ErrMsgInternalServerError)
+			}
+			return
+		}
+	}
+
 	connectorID := r.Form.Get("connector_id")
 	allConnectors, err := h.Storage.ListConnectors(ctx)
 	if err != nil {
@@ -85,9 +103,12 @@ func (h *Handler) handleAuthorization(w http.ResponseWriter, r *http.Request) {
 	// We don't need connector_id any more
 	r.Form.Del("connector_id")
 
-	// Construct a URL with all of the arguments in its query
+	// Construct a URL with all of the arguments in its query. For a signed
+	// request object only the object reference travels in the browser URL: the
+	// signed parameters stay inside the object instead of being expanded back
+	// into the location bar they were meant to leave.
 	connURL := url.URL{
-		RawQuery: r.Form.Encode(),
+		RawQuery: authorizationRedirectQuery(r.Form),
 	}
 
 	// Redirect if a client chooses a specific connector_id
